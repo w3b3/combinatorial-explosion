@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>The Combinatorial Explosion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f1e8;
+    --bg-2: #ede7d8;
+    --ink: #1a1815;
+    --ink-soft: #4a463f;
+    --ink-mute: #8a857a;
+    --line: #2a2722;
+    --rule: #c9c1ae;
+    --rule-soft: #ddd6c4;
+    --accent: oklch(0.55 0.18 28);
+    --accent-soft: oklch(0.55 0.18 28 / 0.12);
+    --pruned: oklch(0.78 0.015 80);
+    --pruned-line: oklch(0.85 0.012 80);
+    --paper: #fbf8f1;
+    --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+    --sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ---------- layout ---------- */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 40px; }
+  .narrow { max-width: 680px; margin: 0 auto; padding: 0 40px; }
+  section { padding: 96px 0; border-top: 1px solid var(--rule); position: relative; }
+  section:first-of-type { border-top: none; }
+
+  /* ---------- typography ---------- */
+  h1, h2, h3, .display {
+    font-family: var(--serif);
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+  h1 { font-size: clamp(48px, 7vw, 96px); margin: 0 0 0.4em; }
+  h2 { font-size: clamp(34px, 4.5vw, 56px); margin: 0 0 0.5em; }
+  h3 { font-size: clamp(22px, 2.4vw, 30px); margin: 0 0 0.6em; font-weight: 500; }
+  p { text-wrap: pretty; max-width: 60ch; margin: 0 0 1em; color: var(--ink-soft); }
+  .lede { font-family: var(--serif); font-size: clamp(20px, 2vw, 26px); line-height: 1.45; color: var(--ink); font-weight: 300; max-width: 32ch; }
+  em { font-style: italic; color: var(--ink); }
+  strong { font-weight: 600; color: var(--ink); }
+  .smallcaps {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+  .num {
+    font-family: var(--serif);
+    font-feature-settings: "lnum" 1, "tnum" 1;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  .mono { font-family: var(--mono); font-size: 0.92em; }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 120px 0 80px; }
+  .hero .eyebrow { display: flex; align-items: center; gap: 14px; margin-bottom: 40px; }
+  .hero .eyebrow .dot { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; }
+  .hero h1 { max-width: 16ch; }
+  .hero .lede { margin-top: 24px; }
+  .hero-meta {
+    display: flex; gap: 48px; margin-top: 64px; padding-top: 32px;
+    border-top: 1px solid var(--rule);
+    font-size: 13px; color: var(--ink-mute);
+  }
+  .hero-meta div b { display: block; color: var(--ink); font-weight: 500; margin-bottom: 2px; }
+
+  /* ---------- 2x2 matrix ---------- */
+  .matrix-wrap {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
+    margin-top: 60px;
+  }
+  .matrix {
+    position: relative;
+    aspect-ratio: 1; max-width: 460px; margin: 0 auto; width: 100%;
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+  .matrix .quad {
+    position: absolute; width: 50%; height: 50%;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 16px;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--serif); font-size: 17px; line-height: 1.25;
+    color: var(--ink);
+  }
+  .matrix .quad:nth-child(1) { top: 0; left: 0; }
+  .matrix .quad:nth-child(2) { top: 0; left: 50%; border-right: none; }
+  .matrix .quad:nth-child(3) { top: 50%; left: 0; border-bottom: none; }
+  .matrix .quad:nth-child(4) { top: 50%; left: 50%; border-right: none; border-bottom: none; }
+  .matrix .axis-x, .matrix .axis-y {
+    position: absolute; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-mute); font-weight: 600;
+  }
+  .matrix .axis-x { left: 50%; transform: translateX(-50%); bottom: -28px; }
+  .matrix .axis-y { top: 50%; transform: translateY(-50%) rotate(-90deg); transform-origin: center; left: -52px; }
+  .matrix .tick { position: absolute; font-size: 10px; color: var(--ink-mute); letter-spacing: 0.1em; text-transform: uppercase; }
+  .matrix .tick.tl { top: -18px; left: 8px; }
+  .matrix .tick.tr { top: -18px; right: 8px; }
+  .matrix .tick.bl { bottom: -18px; left: 8px; }
+  .matrix .tick.lt { left: -18px; top: 8px; transform: rotate(-90deg); transform-origin: left top; }
+  .matrix .tick.lb { left: -18px; bottom: 8px; transform: rotate(-90deg); transform-origin: left bottom; }
+
+  .count-card {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    padding: 36px 32px;
+    position: relative;
+  }
+  .count-card .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 16px; }
+  .count-card .big { font-family: var(--serif); font-size: 120px; line-height: 0.9; letter-spacing: -0.04em; }
+  .count-card .formula { margin-top: 18px; font-family: var(--mono); font-size: 13px; color: var(--ink-soft); }
+
+  /* ---------- the doubling section ---------- */
+  .doubler-grid {
+    display: grid; grid-template-columns: 1fr; gap: 48px;
+    margin-top: 56px;
+  }
+  .doubler-controls {
+    display: flex; gap: 0; border: 1px solid var(--line);
+    background: var(--paper); width: fit-content;
+  }
+  .doubler-controls button {
+    appearance: none; border: none; background: transparent;
+    padding: 14px 22px; font-family: var(--sans); font-size: 13px; font-weight: 500;
+    cursor: pointer; color: var(--ink-soft);
+    border-right: 1px solid var(--rule);
+    letter-spacing: 0.04em;
+    transition: background 0.15s, color 0.15s;
+  }
+  .doubler-controls button:last-child { border-right: none; }
+  .doubler-controls button:hover { background: var(--bg-2); color: var(--ink); }
+  .doubler-controls button.primary { background: var(--ink); color: var(--paper); }
+  .doubler-controls button.primary:hover { background: var(--accent); color: var(--paper); }
+  .doubler-controls button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .doubler-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+    border: 1px solid var(--line); background: var(--paper);
+    margin-top: 24px;
+  }
+  .doubler-stats > div { padding: 24px 28px; border-right: 1px solid var(--rule); }
+  .doubler-stats > div:last-child { border-right: none; }
+  .doubler-stats .k { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 8px; }
+  .doubler-stats .v { font-family: var(--serif); font-size: 38px; letter-spacing: -0.02em; line-height: 1; }
+  .doubler-stats .v small { font-family: var(--mono); font-size: 13px; color: var(--ink-mute); margin-left: 6px; letter-spacing: 0; }
+
+  .tree-canvas {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    margin-top: 24px;
+    overflow: hidden;
+    position: relative;
+  }
+  .tree-canvas svg { display: block; width: 100%; height: auto; }
+
+  .question-list {
+    margin-top: 24px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .q-row {
+    display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    font-size: 14px;
+  }
+  .q-row.dim { opacity: 0.4; }
+  .q-row .idx { font-family: var(--mono); font-size: 12px; color: var(--ink-mute); }
+  .q-row .qname { font-weight: 500; color: var(--ink); }
+  .q-row .qopts { font-family: var(--mono); font-size: 12px; color: var(--ink-mute); }
+
+  /* ---------- big number section ---------- */
+  .climb {
+    display: grid; grid-template-columns: 1fr 1.4fr; gap: 80px;
+    align-items: start; margin-top: 48px;
+  }
+  .climb-table {
+    border-top: 1px solid var(--line);
+  }
+  .climb-table .row {
+    display: grid; grid-template-columns: 90px 1fr 140px;
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 0;
+    align-items: baseline;
+    font-family: var(--serif);
+  }
+  .climb-table .row.head {
+    border-bottom: 1px solid var(--line);
+    font-family: var(--sans); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-mute); padding: 10px 0;
+  }
+  .climb-table .row .n { font-size: 22px; font-feature-settings: "tnum" 1; }
+  .climb-table .row .label { color: var(--ink-soft); font-family: var(--sans); font-size: 14px; }
+  .climb-table .row .count { font-size: 22px; text-align: right; font-feature-settings: "tnum" 1; }
+  .climb-table .row.active { background: var(--accent-soft); }
+  .climb-table .row.active .label { color: var(--ink); }
+
+  .dot-grid {
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    gap: 4px;
+    border: 1px solid var(--line);
+    padding: 18px;
+    background: var(--paper);
+    aspect-ratio: 1;
+  }
+  .dot-grid .d {
+    background: var(--ink);
+    border-radius: 50%;
+    aspect-ratio: 1;
+    transform: scale(0);
+    transition: transform 0.4s cubic-bezier(.2,.7,.2,1.1), background 0.2s;
+  }
+  .dot-grid .d.on { transform: scale(1); }
+  .dot-grid .d.highlight { background: var(--accent); }
+
+  /* ---------- editable questions ---------- */
+  .editable-list {
+    border: 1px solid var(--line); background: var(--paper);
+    margin-top: 32px;
+  }
+  .editable-list .row {
+    display: grid; grid-template-columns: 36px 1fr 1fr 100px 80px;
+    align-items: center;
+    border-bottom: 1px solid var(--rule);
+    transition: background 0.15s;
+  }
+  .editable-list .row:last-child { border-bottom: none; }
+  .editable-list .row.head {
+    background: var(--bg-2);
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-mute); font-weight: 600;
+  }
+  .editable-list .row.head > div { padding: 10px 14px; }
+  .editable-list .row > div { padding: 4px 14px; }
+  .editable-list input {
+    width: 100%; border: none; background: transparent;
+    font-family: var(--sans); font-size: 14px; color: var(--ink);
+    padding: 10px 0; outline: none;
+  }
+  .editable-list input:focus { color: var(--accent); }
+  .editable-list .idx { font-family: var(--mono); font-size: 12px; color: var(--ink-mute); padding: 0 0 0 14px; }
+  .editable-list .branches {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-soft);
+    text-align: right;
+  }
+  .editable-list .move {
+    display: flex; gap: 2px; padding: 0 12px;
+  }
+  .editable-list .move button {
+    appearance: none; border: 1px solid var(--rule); background: var(--paper);
+    width: 26px; height: 26px; cursor: pointer; color: var(--ink-mute);
+    font-size: 12px; line-height: 1; padding: 0;
+  }
+  .editable-list .move button:hover { color: var(--ink); border-color: var(--line); }
+
+  /* ---------- path explorer ---------- */
+  .path-display {
+    margin-top: 32px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    padding: 32px;
+    min-height: 140px;
+  }
+  .path-display .empty { color: var(--ink-mute); font-style: italic; }
+  .path-display .crumbs {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-bottom: 16px;
+  }
+  .path-display .crumb {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border: 1px solid var(--rule);
+    font-size: 13px; background: var(--bg);
+  }
+  .path-display .crumb b { font-weight: 600; }
+  .path-display .crumb .sep { color: var(--ink-mute); }
+  .path-display .arrow { color: var(--ink-mute); }
+  .path-display .verdict {
+    font-family: var(--serif); font-size: 22px; line-height: 1.35;
+    color: var(--ink); margin-top: 12px;
+  }
+
+  /* ---------- killer question section ---------- */
+  .killer {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 48px;
+    margin-top: 48px;
+  }
+  .killer-card {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    padding: 32px;
+  }
+  .killer-card h3 { margin-top: 0; }
+  .killer-card .head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid var(--rule); padding-bottom: 14px; margin-bottom: 20px;
+  }
+  .killer-card .head .label { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-mute); }
+  .killer-card .head .pill {
+    font-family: var(--mono); font-size: 11px;
+    padding: 3px 8px; background: var(--ink); color: var(--paper);
+  }
+  .killer-card .head .pill.accent { background: var(--accent); }
+  .killer-card .step {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 14px;
+    align-items: baseline;
+    padding: 12px 0; border-bottom: 1px dotted var(--rule);
+    font-size: 14px;
+  }
+  .killer-card .step:last-child { border-bottom: none; }
+  .killer-card .step .n { font-family: var(--mono); color: var(--ink-mute); font-size: 12px; }
+  .killer-card .step .q { color: var(--ink); }
+  .killer-card .step .cut {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-mute);
+    font-feature-settings: "tnum" 1;
+  }
+  .killer-card .step.killer-cut .cut { color: var(--accent); font-weight: 600; }
+  .killer-card .footer {
+    margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--rule);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .killer-card .footer .k { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-mute); }
+  .killer-card .footer .v { font-family: var(--serif); font-size: 28px; }
+
+  /* ---------- pruning visual ---------- */
+  .prune-viz {
+    margin-top: 28px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    padding: 24px;
+  }
+  .prune-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  .prune-bar .pq {
+    width: 200px; color: var(--ink); font-weight: 500;
+  }
+  .prune-bar .track {
+    flex: 1; height: 18px; background: var(--bg-2); position: relative;
+    border: 1px solid var(--rule);
+  }
+  .prune-bar .track .fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: var(--ink);
+    transition: width 0.6s cubic-bezier(.2,.7,.2,1);
+  }
+  .prune-bar .track .fill.cut {
+    background: var(--accent);
+  }
+  .prune-bar .track .fill.remain {
+    background: var(--rule);
+  }
+  .prune-bar .num { width: 100px; text-align: right; font-family: var(--mono); font-size: 12px; }
+
+  /* ---------- closing ---------- */
+  .close-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px;
+    margin-top: 48px;
+  }
+  .close-card { border-top: 1px solid var(--line); padding-top: 20px; }
+  .close-card h3 { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 14px; }
+  .close-card p { font-family: var(--serif); font-size: 19px; line-height: 1.4; color: var(--ink); }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 40px 0 60px;
+    font-size: 12px; color: var(--ink-mute);
+    display: flex; justify-content: space-between;
+  }
+
+  /* ---------- buttons & inputs ---------- */
+  .btn {
+    appearance: none; cursor: pointer;
+    font-family: var(--sans); font-size: 13px; font-weight: 500; letter-spacing: 0.02em;
+    padding: 12px 18px; background: var(--ink); color: var(--paper);
+    border: none;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--accent); }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn.ghost:hover { background: var(--ink); color: var(--paper); }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 900px) {
+    .matrix-wrap, .climb, .killer { grid-template-columns: 1fr; gap: 40px; }
+    .close-grid { grid-template-columns: 1fr; }
+    .editable-list .row { grid-template-columns: 28px 1fr 1fr 70px 70px; font-size: 13px; }
+    section { padding: 64px 0; }
+    .wrap, .narrow { padding: 0 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== HERO ==================== -->
+<section class="hero">
+  <div class="narrow">
+    <div class="eyebrow">
+      <span class="dot"></span>
+      <span class="smallcaps">A note on decision frameworks</span>
+    </div>
+    <h1>Every question you add doubles the world you have to consider.</h1>
+    <p class="lede">A 2&times;2 has four cells. Add a third axis &mdash; eight. By the time you reach eight binary questions, you are looking at <em>two hundred and fifty&#8209;six</em> distinct outcomes. The order in which you ask them decides whether that tree is a tool, or a trap.</p>
+    <div class="hero-meta">
+      <div><b>Read time</b>~ 4 min, interactive</div>
+      <div><b>For</b>Anyone framing a hard call</div>
+      <div><b>The number</b>2<sup>n</sup></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== I. THE FAMILIAR 2x2 ==================== -->
+<section>
+  <div class="wrap">
+    <span class="smallcaps">I &mdash; The familiar grid</span>
+    <h2 style="margin-top: 16px; max-width: 22ch;">Two questions feel manageable. They produce four outcomes.</h2>
+    <p style="max-width: 50ch;">Almost every prioritization conversation begins here. Pick two axes &mdash; <em>cost</em> and <em>importance</em> are the classics &mdash; draw a cross, and you have a vocabulary.</p>
+
+    <div class="matrix-wrap">
+      <div style="position: relative; padding: 30px 60px;">
+        <div class="matrix">
+          <div class="quad">Low cost<br/>Low importance</div>
+          <div class="quad">Low cost<br/>High importance</div>
+          <div class="quad">High cost<br/>Low importance</div>
+          <div class="quad">High cost<br/>High importance</div>
+          <span class="axis-x">Importance &rarr;</span>
+          <span class="axis-y">Cost &rarr;</span>
+        </div>
+      </div>
+      <div class="count-card">
+        <div class="label">Total outcomes</div>
+        <div class="big num">4</div>
+        <div class="formula">2 questions &times; 2 answers each &nbsp;=&nbsp; 2<sup>2</sup> = 4</div>
+        <p style="margin-top: 24px; font-size: 14px; max-width: 38ch;">Four cells. A team can hold all four in their head at once. This is why the 2&times;2 is so seductive &mdash; and why we reach for it again and again.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== II. ADD A DIMENSION ==================== -->
+<section>
+  <div class="wrap">
+    <span class="smallcaps">II &mdash; The third question</span>
+    <h2 style="margin-top: 16px; max-width: 24ch;">Now add <em>customer impact</em>. The grid breaks.</h2>
+    <p style="max-width: 56ch;">A 2&times;2 cannot hold a third axis. We could draw a cube &mdash; three dimensions, eight corners &mdash; but a cube on a slide is already a stretch. So we draw a tree instead. Press <em>Add a question</em> and watch what happens.</p>
+
+    <div class="doubler-grid">
+      <div>
+        <div class="doubler-controls">
+          <button id="dd-add" class="primary">+ Add a question</button>
+          <button id="dd-remove">&minus; Remove last</button>
+          <button id="dd-reset">Reset</button>
+        </div>
+
+        <div class="doubler-stats">
+          <div>
+            <div class="k">Questions</div>
+            <div class="v"><span id="dd-n" class="num">2</span></div>
+          </div>
+          <div>
+            <div class="k">Outcomes</div>
+            <div class="v"><span id="dd-count" class="num">4</span><small>= 2<sup id="dd-exp">2</sup></small></div>
+          </div>
+          <div>
+            <div class="k">Vs. previous</div>
+            <div class="v"><span id="dd-delta" class="num">&mdash;</span></div>
+          </div>
+        </div>
+
+        <div class="tree-canvas">
+          <svg id="dd-tree" viewBox="0 0 1100 460" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+
+        <div class="question-list" id="dd-questions"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== III. THE CLIMB TO 256 ==================== -->
+<section>
+  <div class="wrap">
+    <span class="smallcaps">III &mdash; The climb</span>
+    <h2 style="margin-top: 16px; max-width: 22ch;">Eight questions. Two hundred and fifty&#8209;six outcomes.</h2>
+    <p style="max-width: 56ch;">Every dimension you add does not <em>add</em> options &mdash; it <em>multiplies</em> them. This is the part that breaks intuition. Three questions: 8. Four: 16. Eight: 256. Each row in the table below is one binary question.</p>
+
+    <div class="climb">
+      <div class="climb-table" id="climb-table">
+        <div class="row head"><div>Questions</div><div>What you can describe</div><div style="text-align:right">Outcomes</div></div>
+      </div>
+      <div>
+        <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px;">
+          <span class="smallcaps">Each dot is one possible verdict</span>
+          <span class="num" id="climb-num" style="font-family: var(--serif); font-size: 32px; line-height: 1;">256</span>
+        </div>
+        <div class="dot-grid" id="climb-dots"></div>
+        <p style="margin-top: 18px; font-size: 14px;">Hover a row in the table to see only that many outcomes light up. <strong>Two&#8209;hundred&#8209;and&#8209;fifty&#8209;six</strong> is what eight binary questions actually buys you. Nobody can hold that in their head.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== IV. EDIT YOUR OWN ==================== -->
+<section>
+  <div class="wrap">
+    <span class="smallcaps">IV &mdash; Make it your own</span>
+    <h2 style="margin-top: 16px; max-width: 24ch;">Rename the questions. Click any leaf to read its verdict.</h2>
+    <p style="max-width: 56ch;">These are the eight axes most leadership teams actually argue about. Edit them to match your team&rsquo;s vocabulary. Each row contributes a factor of two; the bottom of the list is where the multiplication finally lands.</p>
+
+    <div class="editable-list" id="edit-list"></div>
+
+    <div style="margin-top: 16px; display:flex; justify-content: space-between; font-size: 13px; color: var(--ink-mute);">
+      <span><span class="mono" id="edit-formula">2 &times; 2 &times; 2 &times; 2 &times; 2 &times; 2 &times; 2 &times; 2</span></span>
+      <span><strong style="color: var(--ink); font-family: var(--serif); font-size: 22px;" id="edit-total">256</strong> total outcomes</span>
+    </div>
+
+    <div style="margin-top: 64px;">
+      <h3>Pick a path through the tree.</h3>
+      <p style="max-width: 56ch;">Click a verdict to assemble it. This is what one cell of the 256-cell hypercube actually says.</p>
+
+      <div class="tree-canvas" style="margin-top: 24px;">
+        <svg id="path-tree" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+
+      <div class="path-display" id="path-display">
+        <div class="empty">Click a leaf in the tree above to see its full verdict.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== V. ORDER MATTERS ==================== -->
+<section>
+  <div class="wrap">
+    <span class="smallcaps">V &mdash; Why order matters</span>
+    <h2 style="margin-top: 16px; max-width: 24ch;">If you ask the killer question first, half the tree disappears.</h2>
+    <p style="max-width: 60ch;">A decision tree is not just a list of questions &mdash; it is an ordered list. The first question you ask is the most powerful one, because each answer eliminates <em>half of everything that lies beneath it</em>. Ask the trivial question first, and you waste that cut on noise. Ask the right question first, and 128 outcomes vanish in a single breath.</p>
+
+    <div class="killer">
+      <div class="killer-card">
+        <div class="head">
+          <span class="label">Approach A</span>
+          <span class="pill">Trivial first</span>
+        </div>
+        <div id="approach-a"></div>
+        <div class="footer">
+          <span class="k">Outcomes still on the table after Q1</span>
+          <span class="v num">128</span>
+        </div>
+      </div>
+      <div class="killer-card">
+        <div class="head">
+          <span class="label">Approach B</span>
+          <span class="pill accent">Killer question first</span>
+        </div>
+        <div id="approach-b"></div>
+        <div class="footer">
+          <span class="k">Outcomes still on the table after Q1</span>
+          <span class="v num" style="color: var(--accent);">128</span>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top: 40px; max-width: 60ch;">Both cut the tree in half &mdash; the math is the same. But <em>which</em> half. In Approach A, the 128 you keep are still tangled with the question you actually care about; you have to keep asking. In Approach B, you have already isolated the half of the world that matters &mdash; everything downstream is now a refinement, not a discovery.</p>
+
+    <h3 style="margin-top: 64px;">Watch the pruning happen.</h3>
+    <p>This is the same eight questions, asked in two orders. The bars show how many of the 256 outcomes are still <em>worth thinking about</em> after each question.</p>
+
+    <div class="prune-viz" id="prune-viz"></div>
+
+    <p style="margin-top: 32px; max-width: 60ch; font-family: var(--serif); font-size: 21px; line-height: 1.45; color: var(--ink);">The lesson is not that decision trees are bad. It is that the first question is doing most of the work &mdash; and almost nobody spends any time choosing it.</p>
+  </div>
+</section>
+
+<!-- ==================== VI. REORDER ==================== -->
+<section>
+  <div class="wrap">
+    <span class="smallcaps">VI &mdash; Try it yourself</span>
+    <h2 style="margin-top: 16px; max-width: 22ch;">Reorder the questions. Watch the tree reshape.</h2>
+    <p style="max-width: 56ch;">Drag the arrows to move questions up and down. The tree below redraws each time. Your job: find the order in which the early questions feel <em>load&#8209;bearing</em> &mdash; the order where, halfway through, you already know roughly what you&rsquo;re going to do.</p>
+
+    <div class="editable-list" id="reorder-list" style="margin-top: 32px;"></div>
+
+    <div class="tree-canvas" style="margin-top: 24px;">
+      <svg id="reorder-tree" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== CLOSING ==================== -->
+<section>
+  <div class="wrap">
+    <span class="smallcaps">VII &mdash; The takeaway</span>
+    <h2 style="margin-top: 16px; max-width: 22ch;">Three things to remember the next time someone draws a 2&times;2.</h2>
+
+    <div class="close-grid">
+      <div class="close-card">
+        <h3>Doubling, not adding</h3>
+        <p>Each new criterion doubles the outcome space. Eight criteria is two&#8209;hundred&#8209;and&#8209;fifty&#8209;six. Twelve is four&#8209;thousand. Adding &ldquo;just one more axis&rdquo; is never just one more.</p>
+      </div>
+      <div class="close-card">
+        <h3>Order is leverage</h3>
+        <p>Every question cuts half the tree. The first question cuts the most absolute volume. Spend disproportionate effort on choosing it.</p>
+      </div>
+      <div class="close-card">
+        <h3>Few questions, well&#8209;ordered</h3>
+        <p>A three&#8209;question tree asked in the right order beats an eight&#8209;question tree asked in the wrong one. Prune before you grow.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="display:flex; justify-content: space-between; width: 100%;">
+    <span>2<sup>n</sup> &mdash; an interactive note</span>
+    <span class="mono">2026</span>
+  </div>
+</footer>
+
+<script>
+/* ===========================================================
+   Default questions
+   =========================================================== */
+const DEFAULT_QUESTIONS = [
+  { name: "Cost",            options: ["Low",     "High"]      },
+  { name: "Importance",      options: ["Low",     "High"]      },
+  { name: "Customer impact", options: ["Small",   "Large"]     },
+  { name: "Time to deliver", options: ["Quick",   "Slow"]      },
+  { name: "Risk",            options: ["Safe",    "Risky"]     },
+  { name: "Reversibility",   options: ["One-way", "Two-way"]   },
+  { name: "Team capacity",   options: ["Stretched","Available"]},
+  { name: "Strategic fit",   options: ["Off-strategy","On-strategy"]}
+];
+
+const fmt = (n) => n.toLocaleString('en-US');
+
+/* ===========================================================
+   SECTION II — Doubling tree
+   =========================================================== */
+const ddState = { n: 2 };
+
+function ddRenderQuestions() {
+  const el = document.getElementById('dd-questions');
+  el.innerHTML = '';
+  for (let i = 0; i < DEFAULT_QUESTIONS.length; i++) {
+    const q = DEFAULT_QUESTIONS[i];
+    const dim = i >= ddState.n;
+    const row = document.createElement('div');
+    row.className = 'q-row' + (dim ? ' dim' : '');
+    row.innerHTML = `
+      <span class="idx">Q${i+1}</span>
+      <span class="qname">${q.name}</span>
+      <span class="qopts">${q.options[0]} / ${q.options[1]}</span>
+    `;
+    el.appendChild(row);
+  }
+}
+
+function ddRenderTree() {
+  const svg = document.getElementById('dd-tree');
+  const W = 1100, H = 460;
+  const n = ddState.n;
+  const leaves = Math.pow(2, n);
+  // depth = n+1 (root + n levels)
+  const depth = n;
+  const xStep = (W - 80) / Math.max(depth, 1);
+  const xs = (level) => 40 + level * xStep;
+
+  // recursively position nodes
+  const ys = [];
+  const top = 30, bottom = H - 30;
+  for (let i = 0; i < leaves; i++) {
+    ys.push(top + (bottom - top) * (i + 0.5) / leaves);
+  }
+
+  let html = '';
+
+  // draw connectors
+  function draw(level, lo, hi) {
+    const cx = xs(level);
+    const cy = (ys[lo] + ys[hi - 1]) / 2;
+    if (level === n) return { x: cx, y: cy };
+    const mid = (lo + hi) >> 1;
+    const left = draw(level + 1, lo, mid);
+    const right = draw(level + 1, mid, hi);
+    // lines
+    html += `<path d="M${cx} ${cy} C${(cx+left.x)/2} ${cy}, ${(cx+left.x)/2} ${left.y}, ${left.x} ${left.y}" stroke="#1a1815" stroke-width="1" fill="none" opacity="0.55"/>`;
+    html += `<path d="M${cx} ${cy} C${(cx+right.x)/2} ${cy}, ${(cx+right.x)/2} ${right.y}, ${right.x} ${right.y}" stroke="#1a1815" stroke-width="1" fill="none" opacity="0.55"/>`;
+    // node
+    html += `<circle cx="${cx}" cy="${cy}" r="3" fill="#1a1815"/>`;
+    return { x: cx, y: cy };
+  }
+  draw(0, 0, leaves);
+
+  // leaves
+  for (let i = 0; i < leaves; i++) {
+    const cx = xs(n);
+    const cy = ys[i];
+    const r = leaves > 64 ? 2 : leaves > 16 ? 3 : 4;
+    html += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="oklch(0.55 0.18 28)"/>`;
+  }
+
+  // question labels along top
+  for (let i = 0; i < n; i++) {
+    const x = xs(i + 0.5);
+    html += `<text x="${x}" y="14" text-anchor="middle" font-family="Inter Tight" font-size="10" font-weight="600" fill="#8a857a" letter-spacing="1.5">${('Q' + (i+1)).toUpperCase()} · ${DEFAULT_QUESTIONS[i].name.toUpperCase()}</text>`;
+  }
+
+  svg.innerHTML = html;
+}
+
+function ddUpdate() {
+  const n = ddState.n;
+  const count = Math.pow(2, n);
+  const prev = n > 1 ? Math.pow(2, n-1) : null;
+  document.getElementById('dd-n').textContent = n;
+  document.getElementById('dd-count').textContent = fmt(count);
+  document.getElementById('dd-exp').textContent = n;
+  document.getElementById('dd-delta').textContent = prev ? `+${fmt(count - prev)}` : '—';
+  document.getElementById('dd-add').disabled = n >= 8;
+  document.getElementById('dd-remove').disabled = n <= 1;
+  ddRenderQuestions();
+  ddRenderTree();
+}
+
+document.getElementById('dd-add').onclick = () => { if (ddState.n < 8) { ddState.n++; ddUpdate(); } };
+document.getElementById('dd-remove').onclick = () => { if (ddState.n > 1) { ddState.n--; ddUpdate(); } };
+document.getElementById('dd-reset').onclick = () => { ddState.n = 2; ddUpdate(); };
+ddUpdate();
+
+/* ===========================================================
+   SECTION III — climb table & dot grid
+   =========================================================== */
+const climbDescriptions = [
+  "Single yes/no",
+  "The classic 2×2",
+  "A cube of choices",
+  "A 4-D hypercube",
+  "Eyebrow-raising",
+  "No team can hold this",
+  "We are now mapping the edges",
+  "256 — the demonstration",
+];
+
+(function() {
+  const tbl = document.getElementById('climb-table');
+  for (let i = 1; i <= 8; i++) {
+    const row = document.createElement('div');
+    row.className = 'row' + (i === 8 ? ' active' : '');
+    row.dataset.n = i;
+    row.innerHTML = `
+      <div class="n num">${i}</div>
+      <div class="label">${climbDescriptions[i-1]}</div>
+      <div class="count num">${fmt(Math.pow(2, i))}</div>
+    `;
+    tbl.appendChild(row);
+    row.onmouseenter = () => climbHighlight(i);
+  }
+  tbl.onmouseleave = () => climbHighlight(8);
+
+  const grid = document.getElementById('climb-dots');
+  for (let i = 0; i < 256; i++) {
+    const d = document.createElement('div');
+    d.className = 'd';
+    grid.appendChild(d);
+  }
+  climbHighlight(8);
+})();
+
+function climbHighlight(n) {
+  const count = Math.pow(2, n);
+  const dots = document.querySelectorAll('#climb-dots .d');
+  dots.forEach((d, i) => {
+    d.classList.toggle('on', i < count);
+    d.classList.toggle('highlight', i < count && n < 8);
+  });
+  document.getElementById('climb-num').textContent = fmt(count);
+  document.querySelectorAll('#climb-table .row').forEach(r => {
+    r.classList.toggle('active', parseInt(r.dataset.n) === n);
+  });
+}
+
+/* ===========================================================
+   SECTION IV — Editable list & path tree
+   =========================================================== */
+const editState = {
+  questions: JSON.parse(JSON.stringify(DEFAULT_QUESTIONS)),
+  selectedPath: null  // array of 0/1 of length 8
+};
+
+function editRender() {
+  const list = document.getElementById('edit-list');
+  list.innerHTML = `
+    <div class="row head">
+      <div>#</div>
+      <div>Question</div>
+      <div>If yes / If no</div>
+      <div class="branches">Branches</div>
+      <div></div>
+    </div>
+  `;
+  editState.questions.forEach((q, i) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const cumulative = Math.pow(2, i + 1);
+    row.innerHTML = `
+      <div class="idx">Q${i+1}</div>
+      <div><input data-i="${i}" data-k="name" value="${q.name}" /></div>
+      <div><input data-i="${i}" data-k="opts" value="${q.options[0]} / ${q.options[1]}" /></div>
+      <div class="branches">${fmt(cumulative)}</div>
+      <div></div>
+    `;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const i = +e.target.dataset.i;
+      const k = e.target.dataset.k;
+      if (k === 'name') editState.questions[i].name = e.target.value;
+      if (k === 'opts') {
+        const parts = e.target.value.split('/').map(s => s.trim());
+        if (parts.length === 2) editState.questions[i].options = parts;
+      }
+      pathTreeRender();
+    });
+  });
+
+  const total = Math.pow(2, editState.questions.length);
+  document.getElementById('edit-total').textContent = fmt(total);
+  document.getElementById('edit-formula').innerHTML =
+    Array(editState.questions.length).fill('2').join(' &times; ') + ' = ' + fmt(total);
+}
+
+/* ---- compact path tree (4 levels visible, last 4 collapsed into bands) ---- */
+function pathTreeRender() {
+  const svg = document.getElementById('path-tree');
+  const W = 1200, H = 520;
+  const N = editState.questions.length; // 8
+  const visibleLevels = 4;  // show first 4 question splits in detail
+  const xStep = (W - 80) / N;
+
+  let html = '';
+
+  // top labels
+  for (let i = 0; i < N; i++) {
+    const x = 40 + (i + 0.5) * xStep;
+    html += `<text x="${x}" y="16" text-anchor="middle" font-family="Inter Tight" font-size="10" font-weight="600" fill="#8a857a" letter-spacing="1.5">Q${i+1} · ${editState.questions[i].name.toUpperCase()}</text>`;
+  }
+
+  // draw the first 4 levels as a tree (16 leaves)
+  const visibleLeaves = Math.pow(2, visibleLevels);
+  const top = 50, bottom = H - 30;
+
+  function ys(level) {
+    const count = Math.pow(2, level);
+    const result = [];
+    for (let i = 0; i < count; i++) {
+      result.push(top + (bottom - top) * (i + 0.5) / count);
+    }
+    return result;
+  }
+
+  // Draw nodes & links from level 0 (root) down to level 4
+  const levelYs = [];
+  for (let l = 0; l <= visibleLevels; l++) levelYs.push(ys(l));
+
+  for (let l = 0; l < visibleLevels; l++) {
+    const xParent = 40 + l * xStep;
+    const xChild = 40 + (l + 1) * xStep;
+    const parentYs = levelYs[l];
+    const childYs = levelYs[l + 1];
+    parentYs.forEach((py, pi) => {
+      const c1 = childYs[pi * 2];
+      const c2 = childYs[pi * 2 + 1];
+      [c1, c2].forEach(cy => {
+        html += `<path d="M${xParent} ${py} C${(xParent+xChild)/2} ${py}, ${(xParent+xChild)/2} ${cy}, ${xChild} ${cy}" stroke="#1a1815" stroke-width="0.8" fill="none" opacity="0.5" data-level="${l}"/>`;
+      });
+    });
+    parentYs.forEach((py) => {
+      html += `<circle cx="${xParent}" cy="${py}" r="2.5" fill="#1a1815"/>`;
+    });
+  }
+  // visible-leaf column (after level 4)
+  const lastCol = 40 + visibleLevels * xStep;
+  levelYs[visibleLevels].forEach((y) => {
+    html += `<circle cx="${lastCol}" cy="${y}" r="2.5" fill="#1a1815"/>`;
+  });
+
+  // For the remaining levels (4..N), draw a "fan" — each visible leaf branches into the remaining 2^(N-4) = 16 outcomes
+  // We collapse this visually: from each visible leaf, draw faded lines spreading to a band of dots
+  const remainingLevels = N - visibleLevels;
+  const remainingLeaves = Math.pow(2, remainingLevels);
+  const bandWidth = xStep * remainingLevels;
+  const bandStart = lastCol;
+  const bandEnd = bandStart + bandWidth;
+
+  levelYs[visibleLevels].forEach((y, li) => {
+    // each visible leaf accounts for 16 final outcomes — spread vertically in a small range around y
+    const spread = (bottom - top) / visibleLeaves * 0.85;
+    const finalYs = [];
+    for (let k = 0; k < remainingLeaves; k++) {
+      finalYs.push(y - spread/2 + spread * (k + 0.5) / remainingLeaves);
+    }
+    finalYs.forEach((fy, fi) => {
+      const finalIdx = li * remainingLeaves + fi;
+      // fade lines
+      html += `<path d="M${bandStart} ${y} L${bandEnd} ${fy}" stroke="oklch(0.78 0.015 80)" stroke-width="0.5" fill="none" opacity="0.4" class="fan-line"/>`;
+      // leaf dot — clickable
+      html += `<circle cx="${bandEnd}" cy="${fy}" r="2" fill="oklch(0.55 0.18 28)" class="leaf" data-idx="${finalIdx}" style="cursor:pointer"/>`;
+    });
+  });
+
+  // q-labels for the band questions
+  for (let i = visibleLevels; i < N; i++) {
+    const x = 40 + (i + 0.5) * xStep;
+    html += `<text x="${x}" y="${H - 8}" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#8a857a">band</text>`;
+  }
+
+  // selected path overlay
+  if (editState.selectedPath) {
+    const path = editState.selectedPath;
+    let py = (top + bottom) / 2;
+    let px = 40;
+    // walk first 4 levels
+    let curIdx = 0;
+    for (let l = 0; l < visibleLevels; l++) {
+      const childCount = Math.pow(2, l + 1);
+      curIdx = curIdx * 2 + path[l];
+      const childYs = levelYs[l + 1];
+      const cy = childYs[curIdx];
+      const cx = 40 + (l + 1) * xStep;
+      html += `<path d="M${px} ${py} C${(px+cx)/2} ${py}, ${(px+cx)/2} ${cy}, ${cx} ${cy}" stroke="oklch(0.55 0.18 28)" stroke-width="2.2" fill="none"/>`;
+      px = cx; py = cy;
+    }
+    // final segment to selected leaf
+    const finalIdx = parseInt(path.join(''), 2);
+    const li = curIdx;
+    const fi = finalIdx % remainingLeaves;
+    const spread = (bottom - top) / visibleLeaves * 0.85;
+    const fy = py - spread/2 + spread * (fi + 0.5) / remainingLeaves;
+    html += `<path d="M${px} ${py} L${bandEnd} ${fy}" stroke="oklch(0.55 0.18 28)" stroke-width="1.8" fill="none"/>`;
+    html += `<circle cx="${bandEnd}" cy="${fy}" r="5" fill="oklch(0.55 0.18 28)" stroke="#fbf8f1" stroke-width="2"/>`;
+  }
+
+  svg.innerHTML = html;
+
+  // attach leaf clicks
+  svg.querySelectorAll('.leaf').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.idx);
+      // convert idx to 8-bit path
+      const path = idx.toString(2).padStart(N, '0').split('').map(Number);
+      editState.selectedPath = path;
+      pathTreeRender();
+      pathDisplayRender();
+    });
+  });
+}
+
+function pathDisplayRender() {
+  const el = document.getElementById('path-display');
+  if (!editState.selectedPath) {
+    el.innerHTML = `<div class="empty">Click a leaf in the tree above to see its full verdict.</div>`;
+    return;
+  }
+  const crumbs = editState.selectedPath.map((bit, i) => {
+    const q = editState.questions[i];
+    return `<span class="crumb"><span class="sep">${q.name}:</span> <b>${q.options[bit]}</b></span>`;
+  }).join('<span class="arrow">›</span>');
+  const verdict = editState.selectedPath.map((bit, i) => editState.questions[i].options[bit]).join(' · ');
+  el.innerHTML = `
+    <div style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 14px;">Outcome 1 of 256</div>
+    <div class="crumbs">${crumbs}</div>
+    <div class="verdict">A project that is <em>${verdict.split(' · ').slice(0, 4).join(', ')}</em>, and additionally <em>${verdict.split(' · ').slice(4).join(', ')}</em>.</div>
+  `;
+}
+
+editRender();
+pathTreeRender();
+
+/* ===========================================================
+   SECTION V — Killer question walkthrough & pruning bars
+   =========================================================== */
+function renderApproach(elId, order, killerIdx) {
+  const el = document.getElementById(elId);
+  let remaining = 256;
+  let html = '';
+  order.forEach((qi, step) => {
+    const before = remaining;
+    remaining = remaining / 2;
+    const isKiller = step === killerIdx;
+    html += `
+      <div class="step ${isKiller ? 'killer-cut' : ''}">
+        <span class="n">Q${step+1}</span>
+        <span class="q">${DEFAULT_QUESTIONS[qi].name}</span>
+        <span class="cut">${fmt(before)} → ${fmt(remaining)}</span>
+      </div>
+    `;
+  });
+  el.innerHTML = html;
+}
+
+// Approach A: trivial first (cost), killer (strategic fit) at the end
+const approachA = [0, 1, 2, 3, 4, 5, 6, 7]; // strategic fit last
+// Approach B: killer first
+const approachB = [7, 1, 0, 2, 3, 4, 5, 6];
+
+renderApproach('approach-a', approachA, 7);
+renderApproach('approach-b', approachB, 0);
+
+/* ---- pruning bars ---- */
+(function() {
+  const el = document.getElementById('prune-viz');
+  const orders = [
+    { label: 'Approach A — trivial first', order: approachA, color: 'var(--ink)' },
+    { label: 'Approach B — killer first',  order: approachB, color: 'var(--accent)' },
+  ];
+  let html = '';
+  orders.forEach((o, oi) => {
+    html += `<div style="margin-top:${oi?28:0}px;">`;
+    html += `<div style="font-size:12px; letter-spacing: 0.1em; text-transform:uppercase; color: var(--ink-mute); margin-bottom:8px; font-weight:600;">${o.label}</div>`;
+    let remaining = 256;
+    o.order.forEach((qi, step) => {
+      const before = remaining;
+      remaining = remaining / 2;
+      const cutPct = ((before - remaining) / 256) * 100;
+      const remainPct = (remaining / 256) * 100;
+      const usedPct = ((256 - before) / 256) * 100;
+      html += `
+        <div class="prune-bar">
+          <div class="pq">Q${step+1}. ${DEFAULT_QUESTIONS[qi].name}</div>
+          <div class="track">
+            <div class="fill" style="width: ${usedPct + cutPct}%; background: ${oi === 1 && step === 0 ? 'var(--accent)' : 'var(--rule)'}"></div>
+            <div class="fill" style="width: ${usedPct}%; background: var(--bg-2)"></div>
+          </div>
+          <div class="num">${fmt(remaining)} left</div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  });
+  el.innerHTML = html;
+})();
+
+/* ===========================================================
+   SECTION VI — Reorder list + tree
+   =========================================================== */
+const reorderState = {
+  order: DEFAULT_QUESTIONS.map((_, i) => i),
+};
+
+function reorderRender() {
+  const list = document.getElementById('reorder-list');
+  list.innerHTML = `
+    <div class="row head">
+      <div>#</div>
+      <div>Question (in your order)</div>
+      <div>Cumulative branches after this question</div>
+      <div>How much of the tree this question prunes</div>
+      <div>Move</div>
+    </div>
+  `;
+  reorderState.order.forEach((qi, pos) => {
+    const q = DEFAULT_QUESTIONS[qi];
+    const before = Math.pow(2, 8 - pos);
+    const after = Math.pow(2, 8 - pos - 1);
+    const cut = before - after;
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <div class="idx">${pos+1}</div>
+      <div style="padding-left:14px; font-weight:500;">${q.name}</div>
+      <div class="branches" style="text-align:left; padding-left:14px;">${fmt(Math.pow(2, pos+1))}</div>
+      <div class="branches">cuts ${fmt(cut)} outcomes</div>
+      <div class="move">
+        <button data-pos="${pos}" data-dir="-1" ${pos===0?'disabled':''}>↑</button>
+        <button data-pos="${pos}" data-dir="1" ${pos===7?'disabled':''}>↓</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      const pos = +b.dataset.pos;
+      const dir = +b.dataset.dir;
+      const np = pos + dir;
+      if (np < 0 || np >= reorderState.order.length) return;
+      const o = reorderState.order;
+      [o[pos], o[np]] = [o[np], o[pos]];
+      reorderRender();
+      reorderTreeRender();
+    };
+  });
+}
+
+function reorderTreeRender() {
+  const svg = document.getElementById('reorder-tree');
+  const W = 1200, H = 520;
+  const N = 8;
+  const visibleLevels = 4;
+  const xStep = (W - 80) / N;
+  let html = '';
+
+  // labels in chosen order
+  reorderState.order.forEach((qi, pos) => {
+    const x = 40 + (pos + 0.5) * xStep;
+    html += `<text x="${x}" y="16" text-anchor="middle" font-family="Inter Tight" font-size="10" font-weight="600" fill="#8a857a" letter-spacing="1.5">${(pos+1)} · ${DEFAULT_QUESTIONS[qi].name.toUpperCase()}</text>`;
+  });
+
+  const top = 50, bottom = H - 30;
+  const ys = (level) => {
+    const count = Math.pow(2, level);
+    const result = [];
+    for (let i = 0; i < count; i++) result.push(top + (bottom - top) * (i + 0.5) / count);
+    return result;
+  };
+  const levelYs = [];
+  for (let l = 0; l <= visibleLevels; l++) levelYs.push(ys(l));
+
+  for (let l = 0; l < visibleLevels; l++) {
+    const xP = 40 + l * xStep, xC = 40 + (l + 1) * xStep;
+    levelYs[l].forEach((py, pi) => {
+      const c1 = levelYs[l+1][pi*2], c2 = levelYs[l+1][pi*2+1];
+      [c1, c2].forEach(cy => {
+        html += `<path d="M${xP} ${py} C${(xP+xC)/2} ${py}, ${(xP+xC)/2} ${cy}, ${xC} ${cy}" stroke="#1a1815" stroke-width="0.8" fill="none" opacity="0.5"/>`;
+      });
+    });
+    levelYs[l].forEach(py => html += `<circle cx="${xP}" cy="${py}" r="2.5" fill="#1a1815"/>`);
+  }
+  const lastCol = 40 + visibleLevels * xStep;
+  levelYs[visibleLevels].forEach(y => html += `<circle cx="${lastCol}" cy="${y}" r="2.5" fill="#1a1815"/>`);
+
+  // band
+  const remainingLevels = N - visibleLevels;
+  const remainingLeaves = Math.pow(2, remainingLevels);
+  const bandWidth = xStep * remainingLevels;
+  const bandEnd = lastCol + bandWidth;
+  const visibleLeaves = Math.pow(2, visibleLevels);
+
+  levelYs[visibleLevels].forEach((y) => {
+    const spread = (bottom - top) / visibleLeaves * 0.85;
+    for (let k = 0; k < remainingLeaves; k++) {
+      const fy = y - spread/2 + spread * (k + 0.5) / remainingLeaves;
+      html += `<path d="M${lastCol} ${y} L${bandEnd} ${fy}" stroke="oklch(0.78 0.015 80)" stroke-width="0.5" fill="none" opacity="0.4"/>`;
+      html += `<circle cx="${bandEnd}" cy="${fy}" r="1.8" fill="oklch(0.55 0.18 28)" opacity="0.7"/>`;
+    }
+  });
+
+  // highlight first question's cut — top half stays normal, bottom half goes muted (or vice versa) just to show "this question splits in half"
+  // we'll annotate the first column with a label
+  html += `<text x="${40}" y="${H - 8}" text-anchor="start" font-family="JetBrains Mono" font-size="10" fill="oklch(0.55 0.18 28)" font-weight="600">Q1 cuts the largest absolute number of outcomes</text>`;
+
+  svg.innerHTML = html;
+}
+
+reorderRender();
+reorderTreeRender();
+
+</script>
+</body>
+</html>
